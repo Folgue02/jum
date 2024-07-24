@@ -1,0 +1,14 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use autodie;
+use feature 'say';
+
+my $args = "";
+$args .= ' "' . $_ . '" ' for @ARGV;
+
+
+say 'Packaging...';
+system('mvn package');
+say "==> Running with the following args: $args";
+system("java -jar target/*-jar-with-dependencies.jar $args");
