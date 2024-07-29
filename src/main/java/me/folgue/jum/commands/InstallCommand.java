@@ -16,6 +16,8 @@ import picocli.CommandLine;
 @CommandLine.Command(name = "install", description = "Installs a utility", version = App.VERSION)
 public class InstallCommand implements Callable<Integer> {
 
+    private JavaUtilityRepository uRepo;
+
     @CommandLine.Parameters(index = "0", description = "Path to the package file")
     private File packageFile;
 
@@ -30,9 +32,9 @@ public class InstallCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        JavaUtilityRepository repo = new JavaUtilityRepository(Path.of(System.getProperty("user.home"), ".jumrepo"));
+        this.uRepo = new JavaUtilityRepository(Path.of(System.getProperty("user.home"), ".jumrepo"));
         try {
-            repo.initialize();
+            this.uRepo.initialize();
         } catch (IOException e) {
             System.err.println(colorize("Couldn't initialize the repository due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
             return 255;
@@ -59,18 +61,25 @@ public class InstallCommand implements Callable<Integer> {
 
         System.out.printf("Using '%s' as package configuration.\n", pkgConfig);
         try {
-            repo.saveScript(pkgConfig);
+            this.uRepo.saveScript(pkgConfig);
         } catch (IOException e) {
             System.err.println(colorize("Couldn't create the package's script due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
             return 1;
         }
 
         try {
-            repo.saveJar(pkgConfig, Path.of(this.jarPackagePath));
+            this.uRepo.saveJar(pkgConfig, Path.of(this.jarPackagePath));
         } catch (IOException e) {
             System.err.println(colorize("Couldn't copy the package's JAR due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
             return 1;
         }
         return 0;
+    }
+
+    public void checkJdkInstallation(String version) {
+        if (this.uRepo.isJdkInstalled(version)) {
+            return;
+        }
+
     }
 }

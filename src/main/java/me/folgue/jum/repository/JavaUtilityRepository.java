@@ -90,6 +90,10 @@ public class JavaUtilityRepository {
         return this.getJdkPath().resolve(version);
     }
 
+    public boolean isJdkInstalled(String version) {
+        return this.getPathToJdk(version).toFile().isDirectory();
+    }
+
     /**
      * Generates a script based on the package configuration given, and saves it
      * to the right place.
