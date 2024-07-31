@@ -1,0 +1,5 @@
+name = 'jum'
+description = 'Java Utility Manager'
+jdkVersion = '22'
+author = 'folgue'
+version = '1.0'
