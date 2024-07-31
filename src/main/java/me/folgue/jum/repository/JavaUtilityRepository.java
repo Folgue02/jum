@@ -3,6 +3,7 @@ package me.folgue.jum.repository;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
@@ -131,6 +132,6 @@ public class JavaUtilityRepository {
     public void saveJar(PackageConfiguration packageConfig, Path originalJarPath) throws IOException {
         Path jarPath = this.getJarPath(packageConfig.getName());
 
-        Files.copy(originalJarPath, jarPath);
+        Files.copy(originalJarPath, jarPath, StandardCopyOption.REPLACE_EXISTING);
     }
 }

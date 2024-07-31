@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import me.folgue.jum.App;
 import me.folgue.jum.config.PackageConfiguration;
 import me.folgue.jum.repository.JavaUtilityRepository;
+import me.folgue.jum.utils.EnvUtils;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "install", description = "Installs a utility", version = App.VERSION)
@@ -41,14 +42,14 @@ public class InstallCommand implements Callable<Integer> {
         }
 
         if (!this.packageFile.isFile()) {
-            System.out.println(colorize("The specified file doesn't exist.", Attribute.RED_TEXT()));
+            System.err.println(colorize("The specified file doesn't exist.", Attribute.RED_TEXT()));
             return 1;
         }
 
         PackageConfiguration pkgConfig;
         try {
             String configStr = Files.readString(this.packageFile.toPath());
-            pkgConfig = PackageConfiguration.fromString(configStr);
+            pkgConfig = PackageConfiguration.fromTOMLString(configStr);
             Objects.requireNonNull(pkgConfig);
         } catch (Exception e) {
             System.err.println(colorize("Couldn't read the specified file due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
@@ -72,6 +73,11 @@ public class InstallCommand implements Callable<Integer> {
         } catch (IOException e) {
             System.err.println(colorize("Couldn't copy the package's JAR due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
             return 1;
+        }
+        System.out.println(colorize("'%s' v'%s' installed succesfully.".formatted(pkgConfig.getName(), pkgConfig.getVersion()), Attribute.GREEN_TEXT()));
+
+        if (!EnvUtils.isInPath(this.uRepo.getBinPath())) {
+            System.out.println(colorize("WARNING: The binaries directory of the JUM repository is not present in the PATH variable, for JUM to work properly, add it to the PATH variable (i.e. export PATH=\"" + this.uRepo.getBinPath() + "\").", Attribute.YELLOW_TEXT()));
         }
         return 0;
     }
