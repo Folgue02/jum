@@ -3,9 +3,12 @@ package me.folgue.jum.utils;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CliUtils {
+public final class CliUtils {
 
     private final static long ANIM_DELAY = 150;
+
+    private CliUtils() {
+    }
 
     public interface Task<T> {
 
@@ -51,5 +54,26 @@ public class CliUtils {
         }
 
         return result.get(0);
+    }
+
+    public String stringIntoLines(String text, int lineLength) {
+        var sb = new StringBuilder();
+        int currLineLength = 0;
+
+        for (char c : text.toCharArray()) {
+            if (currLineLength >= lineLength) {
+                sb.append('\n');
+                sb.append(c);
+                currLineLength = 1;
+            } else if (c == '\n') {
+                sb.append(c);
+                currLineLength = 0;
+            } else {
+                currLineLength++;
+                sb.append(c);
+            }
+
+        }
+        return sb.toString();
     }
 }

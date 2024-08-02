@@ -37,6 +37,14 @@ public class JavaUtilityRepository {
     }
 
     /**
+     * @return An instance of a repository with the default path
+     * (<i>~/.jumrepo</i>).
+     */
+    public static JavaUtilityRepository defaultRepo() {
+        return new JavaUtilityRepository(Path.of(System.getProperty("user.home"), ".jumrepo"));
+    }
+
+    /**
      * Generates the scripts contents based on the configuration given.
      *
      * @param scriptInfo Configuration that'll be used to generate the script.
@@ -79,6 +87,10 @@ public class JavaUtilityRepository {
         return this.getBinPath().resolve(packageName);
     }
 
+    public Path getPkgConfigPath(String packageName) {
+        return this.getBinPath().resolve(packageName + ".toml");
+    }
+
     public Path getJarPath(String packageName) {
         return this.getBinPath().resolve(packageName + ".jar");
     }
@@ -110,10 +122,12 @@ public class JavaUtilityRepository {
 
     /**
      * Writes the passed contents to the path of the script that gets generated
-     * based on the package name.
+     * based on the package name. (<i>i.e. if the package is named 'jum', this
+     * would generate the jum.pl and jum.bat scripts</i>)
      *
      * @param packageName Name of the package.
      * @param contents Contents of the script.
+     * @see getScriptPath
      * @throws IOException If there's any error while writing to the location of
      * the script.
      */
@@ -129,9 +143,27 @@ public class JavaUtilityRepository {
         }
     }
 
+    /**
+     * Copies the jar in the given path, to the repository's bin path. (<i>i.e.
+     * if the package is named 'jum', this copies the jar into the binary
+     * directory of the repository with the name 'jum.jar'</i>)
+     *
+     * @param packageConfig Configuration and specification of the package.
+     * @param originalJarPath Path of the original jar to save.
+     * @see getJarPath
+     * @throws IOException If there are any IO errors along the way.
+     */
     public void saveJar(PackageConfiguration packageConfig, Path originalJarPath) throws IOException {
         Path jarPath = this.getJarPath(packageConfig.getName());
 
         Files.copy(originalJarPath, jarPath, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    public void savePackageConfig(PackageConfiguration packageConfig) throws IOException {
+        Files.writeString(this.getPkgConfigPath(packageConfig.getName()), packageConfig.toTOML());
+    }
+
+    public boolean doesPackageExist(String packageName) {
+        return this.getJarPath(packageName).toFile().isFile();
     }
 }

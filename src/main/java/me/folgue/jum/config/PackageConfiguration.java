@@ -21,4 +21,29 @@ public class PackageConfiguration {
         var mapper = new TomlMapper();
         return mapper.readValue(configStr, PackageConfiguration.class);
     }
+
+    public String toTOML() {
+        var mapper = new TomlMapper();
+        try {
+            return mapper.writeValueAsString(this);
+        } catch (Exception e) {
+            // ??? How does this fail ???
+            throw new Error(e);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return """
+               Name:          %s
+               Description:   %s
+               JDK version:   %s
+               Version:       %s
+               """.formatted(
+                this.name,
+                this.description,
+                this.jdkVersion,
+                this.version
+        );
+    }
 }

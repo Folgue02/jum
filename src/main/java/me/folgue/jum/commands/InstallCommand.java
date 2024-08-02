@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import me.folgue.jum.App;
 import me.folgue.jum.config.PackageConfiguration;
@@ -33,12 +34,8 @@ public class InstallCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        this.uRepo = new JavaUtilityRepository(Path.of(System.getProperty("user.home"), ".jumrepo"));
-        try {
-            this.uRepo.initialize();
-        } catch (IOException e) {
-            System.err.println(colorize("Couldn't initialize the repository due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
-            return 255;
+        if (!this.initalizeRepo()) {
+            return 1;
         }
 
         if (!this.packageFile.isFile()) {
@@ -47,12 +44,11 @@ public class InstallCommand implements Callable<Integer> {
         }
 
         PackageConfiguration pkgConfig;
-        try {
-            String configStr = Files.readString(this.packageFile.toPath());
-            pkgConfig = PackageConfiguration.fromTOMLString(configStr);
-            Objects.requireNonNull(pkgConfig);
-        } catch (Exception e) {
-            System.err.println(colorize("Couldn't read the specified file due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
+        Optional<PackageConfiguration> pkgConfigOpt = this.readPackageConfig(this.packageFile.toPath());
+
+        if (pkgConfigOpt.isPresent()) {
+            pkgConfig = pkgConfigOpt.get();
+        } else {
             return 1;
         }
 
@@ -60,31 +56,77 @@ public class InstallCommand implements Callable<Integer> {
             this.jarPackagePath = Path.of(Objects.requireNonNullElse(this.packageFile.getParent(), "."), pkgConfig.getName() + ".jar").toString();
         }
 
-        System.out.printf("Using '%s' as package configuration.\n", pkgConfig);
+        System.out.printf("Package to be installed: \n%s\n", pkgConfig);
+
+        if (!this.savePackageConfig(pkgConfig) || !this.saveScript(pkgConfig) || !this.saveJar(pkgConfig)) {
+            return 1;
+        }
+
+        System.out.println(colorize("%s v%s installed succesfully.".formatted(pkgConfig.getName(), pkgConfig.getVersion()), Attribute.GREEN_TEXT()));
+
+        this.postInstallationHook();
+        return 0;
+    }
+
+    private Optional<PackageConfiguration> readPackageConfig(Path packageFilePath) {
+        try {
+            String configStr = Files.readString(packageFilePath);
+            PackageConfiguration pkgConfig = PackageConfiguration.fromTOMLString(configStr);
+            Objects.requireNonNull(pkgConfig);
+            return Optional.of(pkgConfig);
+        } catch (IOException e) {
+            System.err.println(colorize("Couldn't read the specified file due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
+            return Optional.empty();
+        } catch (NullPointerException e) {
+            System.err.println(colorize("Invalid package configuration.", Attribute.RED_TEXT()));
+            return Optional.empty();
+        }
+    }
+
+    private boolean initalizeRepo() {
+        this.uRepo = JavaUtilityRepository.defaultRepo();
+        try {
+            this.uRepo.initialize();
+        } catch (IOException e) {
+            System.err.println(colorize("Couldn't initialize the repository due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean savePackageConfig(PackageConfiguration pkgConfig) {
+        try {
+            this.uRepo.savePackageConfig(pkgConfig);
+        } catch (IOException e) {
+            System.err.println(colorize("Couldn't save the package configuration in the repository due to the following repository: " + e, Attribute.RED_TEXT()));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean saveScript(PackageConfiguration pkgConfig) {
         try {
             this.uRepo.saveScript(pkgConfig);
         } catch (IOException e) {
             System.err.println(colorize("Couldn't create the package's script due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
-            return 1;
+            return false;
         }
+        return true;
+    }
 
+    private boolean saveJar(PackageConfiguration pkgConfig) {
         try {
             this.uRepo.saveJar(pkgConfig, Path.of(this.jarPackagePath));
         } catch (IOException e) {
             System.err.println(colorize("Couldn't copy the package's JAR due to the following error: " + e.getMessage(), Attribute.RED_TEXT(), Attribute.BOLD()));
-            return 1;
+            return false;
         }
-        System.out.println(colorize("'%s' v'%s' installed succesfully.".formatted(pkgConfig.getName(), pkgConfig.getVersion()), Attribute.GREEN_TEXT()));
-
-        if (!EnvUtils.isInPath(this.uRepo.getBinPath())) {
-            System.out.println(colorize("WARNING: The binaries directory of the JUM repository is not present in the PATH variable, for JUM to work properly, add it to the PATH variable (i.e. export PATH=\"" + this.uRepo.getBinPath() + "\").", Attribute.YELLOW_TEXT()));
-        }
-        return 0;
+        return true;
     }
 
-    public void checkJdkInstallation(String version) {
-        if (this.uRepo.isJdkInstalled(version)) {
-            return;
+    public void postInstallationHook() {
+        if (!EnvUtils.isInPath(this.uRepo.getBinPath())) {
+            System.out.println(colorize("WARNING: The binaries directory of the JUM repository is not present in the PATH variable, for JUM to work properly, add it to the PATH variable (i.e. export PATH=\"" + this.uRepo.getBinPath() + "\").", Attribute.YELLOW_TEXT()));
         }
 
     }

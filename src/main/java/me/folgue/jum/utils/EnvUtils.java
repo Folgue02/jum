@@ -4,7 +4,10 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.Arrays;
 
-public class EnvUtils {
+public final class EnvUtils {
+
+    private EnvUtils() {
+    }
 
     public static boolean isInPath(Path path) {
         var pathContents = System.getenv().getOrDefault("PATH", "");
